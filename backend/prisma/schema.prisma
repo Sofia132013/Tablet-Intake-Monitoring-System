@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  login       String       @id
+  password    String
+  medications Medication[]
+}
+
+model Medication {
+  id        Int        @id @default(autoincrement())
+  name      String
+  dosage    String?
+  userLogin String?
+  user      User?      @relation(fields: [userLogin], references: [login], onDelete: Cascade)
+  schedules Schedule[]
+  intakes   Intake[]
+}
+
+model Schedule {
+  id           Int        @id @default(autoincrement())
+  date         String
+  time         String
+  medicationId Int
+  medication   Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+}
+
+model Intake {
+  id           Int        @id @default(autoincrement())
+  date         String
+  time         String
+  taken        Boolean    @default(true)
+  medicationId Int
+  medication   Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+}
