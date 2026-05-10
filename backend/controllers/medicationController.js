@@ -3,6 +3,7 @@ import prisma from '../lib/prisma.js';
 export async function getMedications(req, res) {
     try {
         const medications = await prisma.medication.findMany({
+            where: { userLogin: req.user.login },
             include: {
                 schedules: true,
                 intakes: true,
@@ -17,7 +18,7 @@ export async function getMedications(req, res) {
 
 export async function createMedication(req, res) {
     try {
-        const { name, dosage, userLogin } = req.body;
+        const { name, dosage } = req.body;
 
         if (!name) {
             return res.status(400).json({ error: 'Medication name required' });
@@ -27,7 +28,7 @@ export async function createMedication(req, res) {
             data: {
                 name,
                 dosage,
-                userLogin: userLogin || null,
+                userLogin: req.user.login,
             },
         });
 
@@ -45,50 +46,19 @@ export async function deleteMedication(req, res) {
             return res.status(400).json({ error: 'Wrong medication id' });
         }
 
-        await prisma.medication.delete({
-            where: { id },
+        const result = await prisma.medication.deleteMany({
+            where: {
+                id,
+                userLogin: req.user.login,
+            },
         });
+
+        if (result.count === 0) {
+            return res.status(404).json({ error: 'Medication not found' });
+        }
 
         res.json({ message: 'Medication deleted' });
     } catch (err) {
         res.status(404).json({ error: 'Medication not found' });
-    }
-}
-
-export async function getSchedules(req, res) {
-    try {
-        const schedules = await prisma.schedule.findMany({
-            include: { medication: true },
-        });
-
-        res.json(schedules);
-    } catch (err) {
-        res.status(500).json({ error: 'Server error' });
-    }
-}
-
-export async function createSchedule(req, res) {
-    try {
-        const { medicationId, date, time } = req.body;
-
-        if (!date || !time) {
-            return res.status(400).json({ error: 'Date and time required' });
-        }
-
-        if (!medicationId) {
-            return res.status(400).json({ error: 'Medication id required' });
-        }
-
-        const schedule = await prisma.schedule.create({
-            data: {
-                medicationId,
-                date,
-                time,
-            },
-        });
-
-        res.status(201).json(schedule);
-    } catch (err) {
-        res.status(500).json({ error: 'Server error' });
     }
 }

@@ -1,11 +1,13 @@
-const express = require('express');
+import express from 'express';
+import authMiddleware from '../middleware/authMiddleware.js';
+import {
+    createSchedule,
+    getSchedules,
+} from '../controllers/scheduleController.js';
+
 const router = express.Router();
-const authMiddleware = require('../middleware/authMiddleware');
-const scheduleController = require('../controllers/scheduleController');
 
-router.use(authMiddleware);
+router.get('/schedules', authMiddleware, getSchedules);
+router.post('/schedules', authMiddleware, createSchedule);
 
-router.get('/', scheduleController.getSchedules);
-router.post('/', scheduleController.createSchedule);
-
-module.exports = router;
+export default router;

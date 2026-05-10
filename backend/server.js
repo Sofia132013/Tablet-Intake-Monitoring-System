@@ -3,13 +3,18 @@ import express from 'express';
 import helmet from 'helmet';
 import compression from 'compression';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import path from 'path';
 import prisma from './lib/prisma.js';
-import Joi from 'joi';
-import crypto from 'crypto';
+import authRoutes from './routes/authRoutes.js';
 import medicationRoutes from './routes/medicationRoutes.js';
 import intakeRoutes from './routes/intakeRoutes.js';
+import scheduleRoutes from './routes/scheduleRoutes.js';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const PORT = process.env.PORT || 4000;
 const PREFIX = '/api/v1';
@@ -20,10 +25,14 @@ app.use(cors());
 app.use(helmet());
 app.use(compression());
 app.use(express.json());
+app.use('/', authRoutes);
 app.use('/', medicationRoutes);
 app.use('/', intakeRoutes);
+app.use('/', scheduleRoutes);
+app.use(PREFIX, authRoutes);
 app.use(PREFIX, medicationRoutes);
 app.use(PREFIX, intakeRoutes);
+app.use(PREFIX, scheduleRoutes);
 
 app.get(`${PREFIX}/health`, (req, res) => {
     res.json({ status: 'ok',
@@ -31,33 +40,6 @@ app.get(`${PREFIX}/health`, (req, res) => {
         uptime: process.uptime(),
      });
 });
-
-function validate(schema) {
-    return (req, res, next) => {
-        const { error } = schema.validate(req.body);
-
-        if (error) {
-            return res.status(400).json({ error: error.details[0].message });
-        }
-
-        next();
-    };
-}
-
-function hashPassword(password) {
-    const salt = crypto.randomBytes(16).toString('hex');
-    const hash = crypto.scryptSync(password, salt, 64).toString('hex');
-
-    return `${salt}:${hash}`;
-}
-
-function checkPassword(password, savedPassword) {
-    const [salt, hash] = savedPassword.split(':');
-    const passwordHash = crypto.scryptSync(password, salt, 64);
-    const savedHash = Buffer.from(hash, 'hex');
-
-    return crypto.timingSafeEqual(passwordHash, savedHash);
-}
 
 app.get(`${PREFIX}/users/:login`, async (req, res) => {
     try {
@@ -73,52 +55,6 @@ app.get(`${PREFIX}/users/:login`, async (req, res) => {
         res.json({
             login: user.login,
             medications: user.medications,
-        });
-    } catch (err) {
-        res.status(500).json({ error: 'Server error' });
-    }
-})
-
-const userSchema = Joi.object({
-    login: Joi.string().min(3).max(50).required(),
-    password: Joi.string().min(4).max(100).required(),
-})
-
-app.post(`${PREFIX}/users`, validate(userSchema), async (req, res) => {
-    try {
-        const { login, password } = req.body;
-
-        const user = await prisma.user.findUnique({
-            where: { login },
-        });
-
-        if (user) {
-            const isPasswordRight = checkPassword(password, user.password);
-
-            if (!isPasswordRight) {
-                return res.status(401).json({ error: 'Wrong password' });
-            }
-
-            return res.json({
-                message: 'Login successful',
-                user: {
-                    login: user.login,
-                },
-            });
-        }
-
-        const newUser = await prisma.user.create({
-            data: {
-                login,
-                password: hashPassword(password),
-            },
-        });
-
-        res.status(201).json({
-            message: 'User registered',
-            user: {
-                login: newUser.login,
-            },
         });
     } catch (err) {
         res.status(500).json({ error: 'Server error' });

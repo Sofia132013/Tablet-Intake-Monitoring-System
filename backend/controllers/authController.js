@@ -1,71 +1,78 @@
-const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+import prisma from '../lib/prisma.js';
+import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 
-const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
 
-exports.loginOrRegister = async (req, res) => {
-  try {
-    const { login, password } = req.body;
+function hashPassword(password) {
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.scryptSync(password, salt, 64).toString('hex');
 
-    if (!login || !password) {
-      return res.status(400).json({ error: 'Login and password are required' });
-    }
+    return `${salt}:${hash}`;
+}
 
-    const trimmedLogin = login.trim();
-    if (trimmedLogin.length < 3) {
-      return res.status(400).json({ error: 'Login must be at least 3 characters' });
-    }
+function checkPassword(password, savedPassword) {
+    const [salt, hash] = savedPassword.split(':');
+    const passwordHash = crypto.scryptSync(password, salt, 64);
+    const savedHash = Buffer.from(hash, 'hex');
 
-    let user = await prisma.user.findUnique({
-      where: { username: trimmedLogin }
-    });
+    return crypto.timingSafeEqual(passwordHash, savedHash);
+}
 
-    if (user) {
-      // User exists → Login
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      
-      if (!isPasswordValid) {
-        return res.status(401).json({ error: 'Incorrect password' });
-      }
+function createToken(login) {
+    return jwt.sign({ login }, JWT_SECRET, { expiresIn: '7d' });
+}
 
-      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+export async function loginOrRegister(req, res) {
+    try {
+        const { login, password } = req.body;
 
-      return res.json({
-        message: 'Login successful',
-        user: {
-          id: user.id,
-          username: user.username
-        },
-        token
-      });
-
-    } else {
-      // User does not exist → Register
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      user = await prisma.user.create({
-        data: {
-          username: trimmedLogin,
-          password: hashedPassword
+        if (!login || !password) {
+            return res.status(400).json({ error: 'Login and password are required' });
         }
-      });
 
-      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+        const trimmedLogin = login.trim();
 
-      return res.status(201).json({
-        message: 'Account created successfully',
-        user: {
-          id: user.id,
-          username: user.username
-        },
-        token
-      });
+        if (trimmedLogin.length < 3) {
+            return res.status(400).json({ error: 'Login must be at least 3 characters' });
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { login: trimmedLogin },
+        });
+
+        if (user) {
+            const isPasswordValid = checkPassword(password, user.password);
+
+            if (!isPasswordValid) {
+                return res.status(401).json({ error: 'Incorrect password' });
+            }
+
+            return res.json({
+                message: 'Login successful',
+                user: {
+                    login: user.login,
+                },
+                token: createToken(user.login),
+            });
+        }
+
+        const newUser = await prisma.user.create({
+            data: {
+                login: trimmedLogin,
+                password: hashPassword(password),
+            },
+        });
+
+        return res.status(201).json({
+            message: 'Account created successfully',
+            user: {
+                login: newUser.login,
+            },
+            token: createToken(newUser.login),
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Server error' });
     }
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-};
+}
