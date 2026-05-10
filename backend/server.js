@@ -6,6 +6,8 @@ import dotenv from 'dotenv';
 import prisma from './lib/prisma.js';
 import Joi from 'joi';
 import crypto from 'crypto';
+import medicationRoutes from './routes/medicationRoutes.js';
+import intakeRoutes from './routes/intakeRoutes.js';
 
 dotenv.config();
 
@@ -18,6 +20,10 @@ app.use(cors());
 app.use(helmet());
 app.use(compression());
 app.use(express.json());
+app.use('/', medicationRoutes);
+app.use('/', intakeRoutes);
+app.use(PREFIX, medicationRoutes);
+app.use(PREFIX, intakeRoutes);
 
 app.get(`${PREFIX}/health`, (req, res) => {
     res.json({ status: 'ok',
@@ -57,7 +63,7 @@ app.get(`${PREFIX}/users/:login`, async (req, res) => {
     try {
         const user = await prisma.user.findUnique({
             where: { login: req.params.login },
-            include: { pills: true },
+            include: { medications: true },
         });
 
         if (!user) {
@@ -66,7 +72,7 @@ app.get(`${PREFIX}/users/:login`, async (req, res) => {
 
         res.json({
             login: user.login,
-            pills: user.pills,
+            medications: user.medications,
         });
     } catch (err) {
         res.status(500).json({ error: 'Server error' });

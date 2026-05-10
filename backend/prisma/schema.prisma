@@ -8,18 +8,34 @@ datasource db {
 }
 
 model User {
-  login    String @id
-  password String
-  pills    Pill[]
+  login       String       @id
+  password    String
+  medications Medication[]
 }
 
-model Pill {
-  id        Int     @id @default(autoincrement())
+model Medication {
+  id        Int        @id @default(autoincrement())
   name      String
-  time      String
   dosage    String?
-  taken     Boolean @default(false)
-  date      String
-  userLogin String
-  user      User    @relation(fields: [userLogin], references: [login], onDelete: Cascade)
+  userLogin String?
+  user      User?      @relation(fields: [userLogin], references: [login], onDelete: Cascade)
+  schedules Schedule[]
+  intakes   Intake[]
+}
+
+model Schedule {
+  id           Int        @id @default(autoincrement())
+  date         String
+  time         String
+  medicationId Int
+  medication   Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+}
+
+model Intake {
+  id           Int        @id @default(autoincrement())
+  date         String
+  time         String
+  taken        Boolean    @default(true)
+  medicationId Int
+  medication   Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
 }
