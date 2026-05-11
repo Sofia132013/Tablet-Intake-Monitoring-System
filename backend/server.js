@@ -10,6 +10,7 @@ import authRoutes from './routes/authRoutes.js';
 import medicationRoutes from './routes/medicationRoutes.js';
 import intakeRoutes from './routes/intakeRoutes.js';
 import scheduleRoutes from './routes/scheduleRoutes.js';
+import htmlRoutes from "./routes/htmlRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,14 +26,13 @@ app.use(cors());
 app.use(helmet());
 app.use(compression());
 app.use(express.json());
-app.use('/', authRoutes);
-app.use('/', medicationRoutes);
-app.use('/', intakeRoutes);
-app.use('/', scheduleRoutes);
+
 app.use(PREFIX, authRoutes);
 app.use(PREFIX, medicationRoutes);
 app.use(PREFIX, intakeRoutes);
 app.use(PREFIX, scheduleRoutes);
+
+app.use(htmlRoutes)
 
 app.get(`${PREFIX}/health`, (req, res) => {
     res.json({ status: 'ok',
