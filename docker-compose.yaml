@@ -1,0 +1,7 @@
+services:
+  server:
+    build: .
+    ports:
+      - '3000:3000'  # computer-port:container-port (exposed)
+    restart: always
+    container_name: server
