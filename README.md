@@ -2,6 +2,14 @@
 
 ---
 
+A web tablet monitoring system to track medication intake and schedules.\
+Implementation of a backend service to manage application logic and API endpoints.\
+PostgreSQL database to store user data, medication schedules, and intake status.\
+Containerized with Docker.\
+Ran with an NGINX to accept only Secure Socket Layer packets and do load balancing between multiple servers.
+
+A CI/CD pipeline for build, test, and deployment automation is included.
+
 ### Requirements
 1. [Node.js](https://nodejs.org/en) JavaScript runtime 
    >You may be required to install an older version of Node.js (like 22.22.2) as newers may not work with prisma properly, throwing errors such as **Error: (0 , CSe.isError) is not a function**
