@@ -12,7 +12,7 @@
 ### Local execution
 1. Initialize the project from the root with ```npm install``` (or ```npm ci``` to install exact dependencies from the locked ```package-lock.json```)
 2. Create a PostgreSQL database that will be synced with the Prisma schema (you can use different means, for example, using a ```create-db``` package or with pgAdmin as usual)
-3. At the root, add a ```.env``` file with the
+3. At the root, nearby ```.example.env```, add a ```.env``` file with the same fields
    1. **DATABASE_URL** *(postgres://* &lt;Client User&gt; *:* &lt;PostgreSQL Server password&gt; *@* &lt;Server Host IP address&gt; *:* &lt;Server port&gt; */* &lt;Database name&gt; *?* &lt;Optional connection settings as query parameters&gt; *)*
    2. **JWT_SECRET**
    3. **PORT** *(of the Express server)*
