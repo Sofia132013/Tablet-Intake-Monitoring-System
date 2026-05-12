@@ -235,6 +235,9 @@
   //   - Wrong password → red border under password + "Wrong password"
   //   - No alert popups, everything inline
   // --------------------------------------------------------------
+  const API_URL = "http://localhost:4000/api/v1";
+  const TOKEN_KEY = "pill_reminder_token";
+  const USER_KEY = "pill_reminder_user";
   const USERS_STORAGE = "pill_reminder_users";
   const SESSION_STORAGE_KEY = "pill_reminder_session";
   const ACTIVE_USER_KEY = "pill_reminder_active_user";
@@ -372,7 +375,7 @@
   }
 
   // Core login logic with specific visual errors
-  function performLoginWithVisualFeedback(loginStr, password) {
+  async function performLoginWithVisualFeedback(loginStr, password) {
     // Clear all previous errors first
     clearAllErrors();
     
@@ -394,44 +397,61 @@
       return false; // Stop, fields are highlighted with empty errors
     }
     
-    // 3. Check if user exists (User not found error)
-    const user = findUserByLogin(loginStr);
-    if (!user) {
-      showUserNotFoundError();
+    try {
+      const response = await fetch(`${API_URL}/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          login: loginStr,
+          password
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.error === "Incorrect password") {
+          showWrongPasswordError();
+        } else {
+          const loginWrapper = document.getElementById('loginWrapper');
+          const loginErrorDiv = document.getElementById('loginError');
+          loginWrapper.classList.add('error');
+          loginErrorDiv.innerHTML = `❌ ${data.error || "Login error"}`;
+        }
+
+        return false;
+      }
+
+      const sessionData = {
+        login: data.user.login,
+        name: data.user.login,
+        loggedInAt: Date.now()
+      };
+
+      localStorage.setItem(TOKEN_KEY, data.token);
+      localStorage.setItem(USER_KEY, data.user.login);
+      localStorage.setItem(ACTIVE_USER_KEY, data.user.login);
+      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
+
+      window.location.href = "index.html";
+      return true;
+    } catch(e) {
+      const loginWrapper = document.getElementById('loginWrapper');
+      const loginErrorDiv = document.getElementById('loginError');
+      loginWrapper.classList.add('error');
+      loginErrorDiv.innerHTML = '❌ Server is not available';
       return false;
     }
-    
-    // 4. Check password (Wrong password error)
-    if (user.password !== password) {
-      showWrongPasswordError();
-      return false;
-    }
-    
-    // SUCCESS: all good, create session and redirect
-    const sessionData = {
-      login: user.login || loginStr,
-      name: user.name || "User",
-      email: user.email || loginStr,
-      loggedInAt: Date.now()
-    };
-    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
-    localStorage.setItem(ACTIVE_USER_KEY, sessionData.login);
-    
-    window.location.href = "index.html";
-    return true;
   }
 
   // Auto-redirect if already logged in
   function redirectIfAlreadyLoggedIn() {
-    const session = sessionStorage.getItem(SESSION_STORAGE_KEY);
-    const activeUser = localStorage.getItem(ACTIVE_USER_KEY);
-    if (session && activeUser) {
-      try {
-        const sessionData = JSON.parse(session);
-        if (sessionData.login && sessionData.login === activeUser) {
-          window.location.href = "index.html";
-        }
-      } catch(e) {}
+    const token = localStorage.getItem(TOKEN_KEY);
+
+    if (token) {
+      window.location.href = "index.html";
     }
   }
   
@@ -481,10 +501,10 @@
     const passwordInput = document.getElementById("loginPassword");
     const signinButton = document.getElementById("doSigninBtn");
     
-    const handleSignIn = () => {
+    const handleSignIn = async () => {
       const loginValue = usernameInput.value;
       const passwordValue = passwordInput.value;
-      performLoginWithVisualFeedback(loginValue, passwordValue);
+      await performLoginWithVisualFeedback(loginValue, passwordValue);
     };
     
     signinButton.addEventListener("click", handleSignIn);

@@ -1,106 +1,174 @@
 document.addEventListener('DOMContentLoaded', function() {
+  const API_URL = 'http://localhost:4000/api/v1';
+  const TOKEN_KEY = 'pill_reminder_token';
+  const USER_KEY = 'pill_reminder_user';
+
   const monthYearEl = document.getElementById('month-year');
   const daysEl = document.getElementById('days');
   const prevMonthBtn = document.getElementById('prev-month');
   const nextMonthBtn = document.getElementById('next-month');
   const todayBtn = document.getElementById('today-btn');
+  const logoutBtn = document.getElementById('logout-btn');
   const eventDateEl = document.getElementById('event-date');
   const eventListEl = document.getElementById('event-list');
   const addPillBtn = document.getElementById('add-pill-btn');
   const pillNameInput = document.getElementById('pill-name');
   const pillTimeInput = document.getElementById('pill-time');
   const pillDosageInput = document.getElementById('pill-dosage');
-  
+
   let currentDate = new Date();
   let selectedDate = null;
-  
-  // Load pills from localStorage or use default
-  let pills = loadPills();
-  
-  // Sample default pills if empty
-  if (Object.keys(pills).length === 0) {
-    pills = {
-      '2025-9-15': [
-        { name: 'Aspirin', time: '08:00', dosage: '100', taken: false },
-        { name: 'Vitamin D', time: '20:00', dosage: '2000', taken: false }
-      ],
-      '2025-9-20': [
-        { name: 'Lisinopril', time: '09:00', dosage: '10', taken: false }
-      ],
-      '2025-9-25': [
-        { name: 'Metformin', time: '19:00', dosage: '500', taken: false },
-        { name: 'Aspirin', time: '08:00', dosage: '100', taken: false }
-      ]
+  let medications = [];
+  let pills = {};
+
+  const token = localStorage.getItem(TOKEN_KEY);
+
+  if (!token) {
+    window.location.href = 'login.html';
+    return;
+  }
+
+  function getHeaders() {
+    return {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
     };
-    savePills();
   }
-  
-  // Save pills to localStorage
-  function savePills() {
-    localStorage.setItem('pills', JSON.stringify(pills));
+
+  async function apiRequest(url, options = {}) {
+    const response = await fetch(`${API_URL}${url}`, {
+      ...options,
+      headers: {
+        ...getHeaders(),
+        ...(options.headers || {}),
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Request error');
+    }
+
+    return data;
   }
-  
-  // Load pills from localStorage
-  function loadPills() {
-    const saved = localStorage.getItem('pills');
-    return saved ? JSON.parse(saved) : {};
+
+  async function loadMedications() {
+    try {
+      medications = await apiRequest('/medications');
+      pills = buildPillsByDate(medications);
+      renderCalendar();
+
+      if (selectedDate) {
+        const dateStr = getDateKey(selectedDate);
+        showPills(dateStr);
+      }
+    } catch (err) {
+      if (
+        err.message === 'Invalid token' ||
+        err.message === 'Access denied. No token provided.' ||
+        err.message === 'Token expired. Please login again.'
+      ) {
+        logout();
+        return;
+      }
+
+      eventListEl.innerHTML = `<div class="no-events">${escapeHtml(err.message)}</div>`;
+    }
   }
-  
-  // Render calendar
+
+  function buildPillsByDate(items) {
+    const result = {};
+
+    items.forEach(medication => {
+      medication.schedules.forEach(schedule => {
+        const dateStr = schedule.date;
+        const intake = medication.intakes.find(item => {
+          return item.date === schedule.date && item.time === schedule.time;
+        });
+
+        if (!result[dateStr]) {
+          result[dateStr] = [];
+        }
+
+        result[dateStr].push({
+          medicationId: medication.id,
+          scheduleId: schedule.id,
+          name: medication.name,
+          time: schedule.time,
+          dosage: medication.dosage || '',
+          taken: Boolean(intake),
+        });
+      });
+    });
+
+    return result;
+  }
+
+  function getDateKey(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  }
+
+  function formatDateKey(dateStr) {
+    return dateStr;
+  }
+
   function renderCalendar() {
     const firstDay = new Date(
       currentDate.getFullYear(),
       currentDate.getMonth(),
       1
     );
-    
+
     const lastDay = new Date(
       currentDate.getFullYear(),
       currentDate.getMonth() + 1,
       0
     );
-    
+
     const prevLastDay = new Date(
       currentDate.getFullYear(),
       currentDate.getMonth(),
       0
     );
-    
+
     const firstDayIndex = firstDay.getDay();
     const lastDayIndex = lastDay.getDay();
     const nextDays = 7 - lastDayIndex - 1;
-    
+
     const months = [
-      "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December"
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
     ];
-    
+
     monthYearEl.innerHTML = `${months[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
-    
-    let days = "";
-    
-    // Previous month days
+
+    let days = '';
+
     for (let x = firstDayIndex; x > 0; x--) {
       const prevDate = prevLastDay.getDate() - x + 1;
-      const dateKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}-${prevDate}`;
+      const dateKey = getDateKey(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, prevDate));
       const hasPill = pills[dateKey] !== undefined;
-      
+
       days += `<div class="day other-month${hasPill ? ' has-events' : ''}">${prevDate}</div>`;
     }
-    
-    // Current month days
+
     for (let i = 1; i <= lastDay.getDate(); i++) {
       const date = new Date(
         currentDate.getFullYear(),
         currentDate.getMonth(),
         i
       );
-      
-      const dateKey = `${currentDate.getFullYear()}-${currentDate.getMonth() + 1}-${i}`;
+
+      const dateKey = getDateKey(date);
       const hasPill = pills[dateKey] !== undefined;
-      
+
       let dayClass = 'day';
-      
+
       if (
         date.getDate() === new Date().getDate() &&
         date.getMonth() === new Date().getMonth() &&
@@ -108,7 +176,7 @@ document.addEventListener('DOMContentLoaded', function() {
       ) {
         dayClass += ' today';
       }
-      
+
       if (
         selectedDate &&
         date.getDate() === selectedDate.getDate() &&
@@ -117,25 +185,23 @@ document.addEventListener('DOMContentLoaded', function() {
       ) {
         dayClass += ' selected';
       }
-      
+
       if (hasPill) {
         dayClass += ' has-events';
       }
-      
+
       days += `<div class="${dayClass}" data-date="${dateKey}">${i}</div>`;
     }
-    
-    // Next month days
+
     for (let j = 1; j <= nextDays; j++) {
-      const dateKey = `${currentDate.getFullYear()}-${currentDate.getMonth() + 2}-${j}`;
+      const dateKey = getDateKey(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, j));
       const hasPill = pills[dateKey] !== undefined;
-      
+
       days += `<div class="day other-month${hasPill ? ' has-events' : ''}">${j}</div>`;
     }
-    
+
     daysEl.innerHTML = days;
-    
-    // Add click event to days
+
     document.querySelectorAll('.day:not(.other-month)').forEach(day => {
       day.addEventListener('click', () => {
         const dateStr = day.getAttribute('data-date');
@@ -146,171 +212,192 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     });
   }
-  
-  // Toggle pill taken status
-  function togglePillTaken(dateStr, pillIndex) {
-    if (pills[dateStr] && pills[dateStr][pillIndex]) {
-      pills[dateStr][pillIndex].taken = !pills[dateStr][pillIndex].taken;
-      savePills();
-      showPills(dateStr); // Refresh the display
-      renderCalendar(); // Update calendar indicators
+
+  async function togglePillTaken(dateStr, pillIndex) {
+    const pill = pills[dateStr] && pills[dateStr][pillIndex];
+
+    if (!pill || pill.taken) {
+      return;
     }
-  }
-  
-  // Delete pill
-  function deletePill(dateStr, pillIndex) {
-    if (pills[dateStr]) {
-      pills[dateStr].splice(pillIndex, 1);
-      if (pills[dateStr].length === 0) {
-        delete pills[dateStr];
-      }
-      savePills();
+
+    try {
+      await apiRequest('/intake', {
+        method: 'POST',
+        body: JSON.stringify({
+          medicationId: pill.medicationId,
+          date: formatDateKey(dateStr),
+          time: pill.time,
+          taken: true,
+        }),
+      });
+
+      await loadMedications();
       showPills(dateStr);
-      renderCalendar();
+    } catch (err) {
+      alert(err.message);
     }
   }
-  
-  // Show pills for selected date
-  function showPills(dateStr) {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const dateObj = new Date(year, month - 1, day);
-  const months = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  ];
-  
-  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  const dayName = dayNames[dateObj.getDay()];
-  
-  eventDateEl.textContent = `${dayName}, ${months[dateObj.getMonth()]} ${day}, ${year}`;
-  
-  // Clear previous pills
-  eventListEl.innerHTML = '';
-  
-  if (pills[dateStr] && pills[dateStr].length > 0) {
-    // Сортируем таблетки по времени
-    const sortedPills = [...pills[dateStr]].sort((a, b) => {
-      if (!a.time) return 1;
-      if (!b.time) return -1;
-      return a.time.localeCompare(b.time);
-    });
-    
-    let currentHour = null;
-    
-    sortedPills.forEach((pill, sortedIndex) => {
-      const originalIndex = pills[dateStr].findIndex(p => p === pill);
-      const pillHour = pill.time ? pill.time.substring(0, 2) : null;
-      
-    //   if (pillHour && pillHour !== currentHour) {
-    //     currentHour = pillHour;
-    //     const hourSeparator = document.createElement('div');
-    //     hourSeparator.className = 'hour-separator';
-    //     hourSeparator.innerHTML = `<i class="fas fa-sun"></i> ${currentHour}:00 - ${parseInt(currentHour) + 1}:00`;
-    //     eventListEl.appendChild(hourSeparator);
-    //   }
-      
-      const pillItem = document.createElement('div');
-      pillItem.className = `pill-item ${pill.taken ? 'pill-taken' : ''}`;
-      const displayTime = pill.time ? pill.time.substring(0, 5) : 'Not set';
-      
-      pillItem.innerHTML = `
-        <div class="pill-info">
-          <div class="pill-name">
-            <i class="fas fa-capsules"></i>
-            <strong>${escapeHtml(pill.name)}</strong>
-          </div>
-          <div class="pill-details">
-            <span class="pill-time"><i class="far fa-clock"></i> ${displayTime}</span>
-            ${pill.dosage ? `<span class="pill-dosage"><i class="fas fa-weight-hanging"></i> ${pill.dosage} mg</span>` : ''}
-          </div>
-        </div>
-        <div class="pill-actions">
-          <button class="pill-taken-btn ${pill.taken ? 'taken' : ''}" data-index="${originalIndex}">
-            <i class="fas ${pill.taken ? 'fa-check-circle' : 'fa-circle'}"></i>
-          </button>
-          <button class="pill-delete-btn" data-index="${originalIndex}">
-            <i class="fas fa-trash-alt"></i>
-          </button>
-        </div>
-      `;
-      
-      eventListEl.appendChild(pillItem);
-    });
-    
-    document.querySelectorAll('.pill-taken-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const index = parseInt(btn.dataset.index);
-        togglePillTaken(dateStr, index);
+
+  async function deletePill(dateStr, pillIndex) {
+    const pill = pills[dateStr] && pills[dateStr][pillIndex];
+
+    if (!pill) {
+      return;
+    }
+
+    const isConfirmed = confirm('Delete this medication and all its schedules?');
+
+    if (!isConfirmed) {
+      return;
+    }
+
+    try {
+      await apiRequest(`/medications/${pill.medicationId}`, {
+        method: 'DELETE',
       });
-    });
-    
-    document.querySelectorAll('.pill-delete-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const index = parseInt(btn.dataset.index);
-        deletePill(dateStr, index);
-      });
-    });
-  } else {
-    eventListEl.innerHTML = '<div class="no-events"><i class="fas fa-pills"></i> No pills scheduled for this day<br><small>Use the form above to add pills!</small></div>';
+
+      await loadMedications();
+      showPills(dateStr);
+    } catch (err) {
+      alert(err.message);
+    }
   }
-}
-  ////////////////////////////////////
-  // Helper function to escape HTML
+
+  function showPills(dateStr) {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const dateObj = new Date(year, month - 1, day);
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayName = dayNames[dateObj.getDay()];
+
+    eventDateEl.textContent = `${dayName}, ${months[dateObj.getMonth()]} ${day}, ${year}`;
+    eventListEl.innerHTML = '';
+
+    if (pills[dateStr] && pills[dateStr].length > 0) {
+      const sortedPills = [...pills[dateStr]].sort((a, b) => {
+        if (!a.time) return 1;
+        if (!b.time) return -1;
+        return a.time.localeCompare(b.time);
+      });
+
+      sortedPills.forEach(pill => {
+        const originalIndex = pills[dateStr].findIndex(p => p === pill);
+        const pillItem = document.createElement('div');
+        const displayTime = pill.time ? pill.time.substring(0, 5) : 'Not set';
+
+        pillItem.className = `pill-item ${pill.taken ? 'pill-taken' : ''}`;
+        pillItem.innerHTML = `
+          <div class="pill-info">
+            <div class="pill-name">
+              <i class="fas fa-capsules"></i>
+              <strong>${escapeHtml(pill.name)}</strong>
+            </div>
+            <div class="pill-details">
+              <span class="pill-time"><i class="far fa-clock"></i> ${displayTime}</span>
+              ${pill.dosage ? `<span class="pill-dosage"><i class="fas fa-weight-hanging"></i> ${escapeHtml(pill.dosage)}</span>` : ''}
+            </div>
+          </div>
+          <div class="pill-actions">
+            <button class="pill-taken-btn ${pill.taken ? 'taken' : ''}" data-index="${originalIndex}">
+              <i class="fas ${pill.taken ? 'fa-check-circle' : 'fa-circle'}"></i>
+            </button>
+            <button class="pill-delete-btn" data-index="${originalIndex}">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </div>
+        `;
+
+        eventListEl.appendChild(pillItem);
+      });
+
+      document.querySelectorAll('.pill-taken-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const index = parseInt(btn.dataset.index);
+          togglePillTaken(dateStr, index);
+        });
+      });
+
+      document.querySelectorAll('.pill-delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const index = parseInt(btn.dataset.index);
+          deletePill(dateStr, index);
+        });
+      });
+    } else {
+      eventListEl.innerHTML = '<div class="no-events"><i class="fas fa-pills"></i> No pills scheduled for this day<br><small>Use the form above to add pills!</small></div>';
+    }
+  }
+
   function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
   }
-  
-  // Add new pill
-  function addPill() {
+
+  async function addPill() {
     if (!selectedDate) {
       alert('Please select a date first!');
       return;
     }
-    
+
     const pillName = pillNameInput.value.trim();
     const pillTime = pillTimeInput.value;
     const pillDosage = pillDosageInput.value.trim();
-    
+
     if (!pillName) {
       alert('Please enter pill name!');
       return;
     }
-    
+
     if (!pillTime) {
       alert('Please select time!');
       return;
     }
-    
-    const dateStr = `${selectedDate.getFullYear()}-${selectedDate.getMonth() + 1}-${selectedDate.getDate()}`;
-    
-    if (!pills[dateStr]) {
-      pills[dateStr] = [];
+
+    const dateStr = getDateKey(selectedDate);
+
+    try {
+      const medication = await apiRequest('/medications', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: pillName,
+          dosage: pillDosage || '',
+        }),
+      });
+
+      await apiRequest('/schedules', {
+        method: 'POST',
+        body: JSON.stringify({
+          medicationId: medication.id,
+          date: formatDateKey(dateStr),
+          time: pillTime,
+        }),
+      });
+
+      pillNameInput.value = '';
+      pillTimeInput.value = '';
+      pillDosageInput.value = '';
+
+      await loadMedications();
+      showPills(dateStr);
+    } catch (err) {
+      alert(err.message);
     }
-    
-    pills[dateStr].push({
-      name: pillName,
-      time: pillTime,
-      dosage: pillDosage || '',
-      taken: false
-    });
-    
-    savePills();
-    
-    // Clear form
-    pillNameInput.value = '';
-    pillTimeInput.value = '';
-    pillDosageInput.value = '';
-    
-    // Refresh display
-    showPills(dateStr);
-    renderCalendar();
   }
-  
-  // Previous month
+
+  function logout() {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    sessionStorage.removeItem('pill_reminder_session');
+    window.location.href = 'login.html';
+  }
+
   prevMonthBtn.addEventListener('click', () => {
     currentDate.setMonth(currentDate.getMonth() - 1);
     renderCalendar();
@@ -318,8 +405,7 @@ document.addEventListener('DOMContentLoaded', function() {
     eventListEl.innerHTML = '<div class="no-events">Select a date to add or view pills</div>';
     selectedDate = null;
   });
-  
-  // Next month
+
   nextMonthBtn.addEventListener('click', () => {
     currentDate.setMonth(currentDate.getMonth() + 1);
     renderCalendar();
@@ -327,31 +413,32 @@ document.addEventListener('DOMContentLoaded', function() {
     eventListEl.innerHTML = '<div class="no-events">Select a date to add or view pills</div>';
     selectedDate = null;
   });
-  
-  // Today button
+
   todayBtn.addEventListener('click', () => {
     currentDate = new Date();
     selectedDate = new Date();
     renderCalendar();
-    
-    const dateStr = `${currentDate.getFullYear()}-${currentDate.getMonth() + 1}-${currentDate.getDate()}`;
+
+    const dateStr = getDateKey(currentDate);
     showPills(dateStr);
   });
-  
-  // Add pill button
+
+  logoutBtn.addEventListener('click', logout);
+
   addPillBtn.addEventListener('click', addPill);
-  
-  // Allow Enter key in form
+
   pillNameInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') addPill();
   });
+
   pillTimeInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') addPill();
   });
+
   pillDosageInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') addPill();
   });
-  
-  // Initialize calendar
+
   renderCalendar();
+  loadMedications();
 });
