@@ -1,5 +1,8 @@
 {
   "type": "module",
+  "scripts": {
+    "test:poc": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand tests/poc.test.js"
+  },
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "class-transformer": "^0.5.1",
