@@ -2,7 +2,7 @@ import prisma from '../lib/prisma.js';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 function hashPassword(password) {
     const salt = crypto.randomBytes(16).toString('hex');

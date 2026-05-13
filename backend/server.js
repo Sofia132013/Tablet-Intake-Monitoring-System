@@ -17,7 +17,7 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.OPEN_PORT;
 const PREFIX = '/api/v1';
 
 const app = express();
@@ -62,7 +62,7 @@ app.get(`${PREFIX}/users/:login`, async (req, res) => {
 })
 
 const server = app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`${"Replica " + (process.env.REPLICA_NAME || "Server")} is listening on port ${PORT}`);
 });
 
 function closeServer(server) {

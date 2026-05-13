@@ -8,6 +8,7 @@ const __dirname = path.dirname(__filename);
 const router = express.Router();
 
 router.get("/login", (req, res) => {
+    console.log("Login HTML sending...")
     res.sendFile(path.join(__dirname, "../../front/login.html"))
 })
 
