@@ -1,6 +1,6 @@
 FROM node:22
 
-# incide Docker
+# inside Docker
 WORKDIR /app
 
 COPY front ./front
@@ -11,8 +11,9 @@ COPY package-lock.json .
 
 RUN npm install
 
-EXPOSE 3000
+EXPOSE ${OPEN_PORT}
 
 WORKDIR backend
 RUN npx prisma generate
+
 CMD ["node", "server.js"]
