@@ -13,6 +13,7 @@ services:
       < /etc/nginx/nginx.template
       > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
     environment:
+      - SERVER_IP=${SERVER_IP}
       - REPLICA1_OPEN_SERVER_PORT_MAPPING=${REPLICA1_OPEN_SERVER_PORT_MAPPING}
       - REPLICA2_OPEN_SERVER_PORT_MAPPING=${REPLICA2_OPEN_SERVER_PORT_MAPPING}
       - REPLICA3_OPEN_SERVER_PORT_MAPPING=${REPLICA3_OPEN_SERVER_PORT_MAPPING}
