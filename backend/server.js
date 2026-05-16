@@ -10,7 +10,7 @@ import authRoutes from './routes/authRoutes.js';
 import medicationRoutes from './routes/medicationRoutes.js';
 import intakeRoutes from './routes/intakeRoutes.js';
 import scheduleRoutes from './routes/scheduleRoutes.js';
-import htmlRoutes from "./routes/htmlRoutes.js";
+import fileRoutes from "./routes/fileRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,7 +18,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const PORT = process.env.OPEN_SERVER_PORT;
-const PREFIX = '/api/v1';
+const PREFIX = process.env.API_PREFIX;
 
 const app = express();
 
@@ -32,7 +32,7 @@ app.use(PREFIX, medicationRoutes);
 app.use(PREFIX, intakeRoutes);
 app.use(PREFIX, scheduleRoutes);
 
-app.use(htmlRoutes)
+app.use(fileRoutes)
 
 app.get(`${PREFIX}/health`, (req, res) => {
     res.json({ status: 'ok',

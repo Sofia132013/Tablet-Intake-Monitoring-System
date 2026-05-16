@@ -1,5 +1,7 @@
+import {API_URL} from '/env.js'
+
+
 document.addEventListener('DOMContentLoaded', function() {
-  const API_URL = 'http://localhost:4000/api/v1';
   const TOKEN_KEY = 'pill_reminder_token';
   const USER_KEY = 'pill_reminder_user';
 
@@ -24,7 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const token = localStorage.getItem(TOKEN_KEY);
 
   if (!token) {
-    window.location.href = 'login.html';
+    window.location.href = '/login';
     return;
   }
 
@@ -395,7 +397,7 @@ document.addEventListener('DOMContentLoaded', function() {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     sessionStorage.removeItem('pill_reminder_session');
-    window.location.href = 'login.html';
+    window.location.href = '/login';
   }
 
   prevMonthBtn.addEventListener('click', () => {
