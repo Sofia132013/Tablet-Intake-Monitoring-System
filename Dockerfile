@@ -11,9 +11,9 @@ COPY package-lock.json .
 
 RUN npm install
 
-EXPOSE ${OPEN_PORT}
+EXPOSE ${OPEN_SERVER_PORT}
 
 WORKDIR backend
 RUN npx prisma generate
 
-CMD ["node", "server.js"]
+CMD ["bash", "-c", "npx prisma migrate deploy && node server.js"]

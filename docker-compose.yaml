@@ -2,33 +2,62 @@ services:
   proxy:
     image: nginx:latest
     ports:
-      - "443:443"
-      - "80:80"
+      - ${NGINX_OPEN_HTTPS_PORT}:${NGINX_OPEN_HTTPS_PORT}
+      - ${NGINX_OPEN_HTTP_PORT}:${NGINX_OPEN_HTTP_PORT}
     restart: always
     volumes:
-      - ./backend/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./backend/nginx/nginx.template:/etc/nginx/templates/nginx.template:ro
       - ./backend/nginx/nginx_certificates:/etc/nginx/nginx_certificates:ro
 
   server1:
     build: .
     ports:
-      - 3000:${OPEN_PORT}  # computer-port:container-port (exposed)
+      - ${REPLICA1_OPEN_SERVER_PORT_MAPPING}:${OPEN_SERVER_PORT}  # computer-port:container-port (exposed)
     restart: always
     environment:
       - REPLICA_NAME=Marina
+    depends_on:
+      database:
+        condition: service_healthy
 
   server2:
     build: .
     ports:
-      - 3001:${OPEN_PORT}
+      - ${REPLICA2_OPEN_SERVER_PORT_MAPPING}:${OPEN_SERVER_PORT}
     restart: always
     environment:
       - REPLICA_NAME=Jessica
+    depends_on:
+      database:
+        condition: service_healthy
 
   server3:
     build: .
     ports:
-      - 3002:${OPEN_PORT}
+      - ${REPLICA3_OPEN_SERVER_PORT_MAPPING}:${OPEN_SERVER_PORT}
     restart: always
     environment:
       - REPLICA_NAME=Leon
+    depends_on:
+      database:
+        condition: service_healthy
+
+  database:
+    image: postgres:latest
+    ports:
+      - ${DATABASE_OPEN_PORT_MAPPING}:5432
+    restart: always
+    volumes:
+      - ./backend/data/postgresql:/var/lib/postgresql
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+
+  # for convenient postgres management
+  adminer:
+    image: adminer:latest
+    restart: always
+    ports:
+      - ${ADMINER_OPEN_PORT_MAPPING}:8080

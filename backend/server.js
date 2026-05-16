@@ -17,7 +17,7 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const PORT = process.env.OPEN_PORT;
+const PORT = process.env.OPEN_SERVER_PORT;
 const PREFIX = '/api/v1';
 
 const app = express();

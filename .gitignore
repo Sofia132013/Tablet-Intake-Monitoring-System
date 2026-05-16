@@ -4,3 +4,4 @@ node_modules
 .idea
 /backend/nginx/nginx_certificates/nginx-selfsigned.key
 /generated/prisma
+/backend/data/postgresql/
