@@ -6,8 +6,18 @@ services:
       - ${NGINX_OPEN_HTTP_PORT}:${NGINX_OPEN_HTTP_PORT}
     restart: always
     volumes:
-      - ./backend/nginx/nginx.template:/etc/nginx/templates/nginx.template:ro
+      - ./backend/nginx/nginx.template:/etc/nginx/nginx.template:ro
       - ./backend/nginx/nginx_certificates:/etc/nginx/nginx_certificates:ro
+    command: >
+      bash -c "envsubst '$$REPLICA1_OPEN_SERVER_PORT_MAPPING $$REPLICA2_OPEN_SERVER_PORT_MAPPING $$REPLICA3_OPEN_SERVER_PORT_MAPPING $$NGINX_OPEN_HTTPS_PORT $$NGINX_OPEN_HTTP_PORT'
+      < /etc/nginx/nginx.template
+      > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
+    environment:
+      - REPLICA1_OPEN_SERVER_PORT_MAPPING=${REPLICA1_OPEN_SERVER_PORT_MAPPING}
+      - REPLICA2_OPEN_SERVER_PORT_MAPPING=${REPLICA2_OPEN_SERVER_PORT_MAPPING}
+      - REPLICA3_OPEN_SERVER_PORT_MAPPING=${REPLICA3_OPEN_SERVER_PORT_MAPPING}
+      - NGINX_OPEN_HTTPS_PORT=${NGINX_OPEN_HTTPS_PORT}
+      - NGINX_OPEN_HTTP_PORT=${NGINX_OPEN_HTTP_PORT}
 
   server1:
     build: .

@@ -15,14 +15,14 @@ http {
     # destination of requests going to server
     upstream nodejs_cluster {
         least_conn;
-        server 172.17.0.1:${REPLICA1_OPEN_SERVER_PORT_MAPPING};
-        server 172.17.0.1:${REPLICA2_OPEN_SERVER_PORT_MAPPING};
-        server 172.17.0.1:${REPLICA3_OPEN_SERVER_PORT_MAPPING};
+        server 172.17.0.1:$REPLICA1_OPEN_SERVER_PORT_MAPPING;
+        server 172.17.0.1:$REPLICA2_OPEN_SERVER_PORT_MAPPING;
+        server 172.17.0.1:$REPLICA3_OPEN_SERVER_PORT_MAPPING;
     }
 
     server {
         server_name 172.17.0.1;
-        listen ${NGINX_OPEN_HTTPS_PORT} ssl;
+        listen $NGINX_OPEN_HTTPS_PORT ssl;
         ssl_certificate /etc/nginx/nginx_certificates/nginx-selfsigned.crt;
         ssl_certificate_key /etc/nginx/nginx_certificates/nginx-selfsigned.key;
         location / {
@@ -34,7 +34,7 @@ http {
     
     server {
         server_name 172.17.0.1;
-        listen ${NGINX_OPEN_HTTP_PORT};
+        listen $NGINX_OPEN_HTTP_PORT;
         location / {
             return 301 https://$host$request_uri; 
         }
