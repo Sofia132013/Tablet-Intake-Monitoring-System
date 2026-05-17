@@ -1,18 +1,32 @@
-name: Testing CI
+name: CI and CD
 
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - Dockerfile
 
 jobs:
-  build:
+  CI-testing:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Use Node.js ${{ matrix.node-version }}
+    - name: Use Node.js
       uses: actions/setup-node@v4
       with:
         node-version: 22.x
         cache: 'npm'
     - run: npm install
     - run: npm run test:poc
+
+  CD-push-docker-image:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: build the image
+      run: docker build . --tag tablet-intake-monitoring-system:latest
+    - name: push the image to Docker Hub
+      run: |
+        docker login -u danillatency -p ${{ secrets.DOCKER_HUB_TOKEN }}
+        docker push tablet-intake-monitoring-system:latest
+        
