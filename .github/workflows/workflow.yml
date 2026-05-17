@@ -5,6 +5,8 @@ on:
     branches: [ "main" ]
     paths:
       - Dockerfile
+      - backend
+      - front
   workflow_dispatch:
 
 jobs:
@@ -21,6 +23,7 @@ jobs:
     - run: npm run test:poc
 
   CD-push-docker-image:
+    needs: CI-testing
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4

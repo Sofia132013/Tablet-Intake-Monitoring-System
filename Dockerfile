@@ -5,7 +5,6 @@ WORKDIR /app
 
 COPY front ./front
 COPY backend ./backend
-COPY .env .
 COPY package.json .
 COPY package-lock.json .
 

@@ -26,6 +26,9 @@ services:
     ports:
       - ${REPLICA1_OPEN_SERVER_PORT_MAPPING}:${OPEN_SERVER_PORT}  # computer-port:container-port (exposed)
     restart: always
+    volumes:
+      - .env:/app/.env:ro
+      - ./font/env.js:/app/front/env.js:ro
     environment:
       - REPLICA_NAME=Marina
     depends_on:
@@ -37,6 +40,9 @@ services:
     ports:
       - ${REPLICA2_OPEN_SERVER_PORT_MAPPING}:${OPEN_SERVER_PORT}
     restart: always
+    volumes:
+      - .env:/app/.env:ro
+      - ./font/env.js:/app/front/env.js:ro
     environment:
       - REPLICA_NAME=Jessica
     depends_on:
@@ -48,6 +54,9 @@ services:
     ports:
       - ${REPLICA3_OPEN_SERVER_PORT_MAPPING}:${OPEN_SERVER_PORT}
     restart: always
+    volumes:
+      - .env:/app/.env:ro
+      - ./font/env.js:/app/front/env.js:ro
     environment:
       - REPLICA_NAME=Leon
     depends_on:
