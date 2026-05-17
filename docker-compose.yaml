@@ -9,8 +9,7 @@ services:
       - ./backend/nginx/nginx.template:/etc/nginx/nginx.template:ro
       - ./backend/nginx/nginx_certificates:/etc/nginx/nginx_certificates:ro
     command: >
-      bash -c "envsubst '$$REPLICA1_OPEN_SERVER_PORT_MAPPING $$REPLICA2_OPEN_SERVER_PORT_MAPPING
-                         $$REPLICA3_OPEN_SERVER_PORT_MAPPING $$NGINX_OPEN_HTTPS_PORT $$NGINX_OPEN_HTTP_PORT $$SERVER_IP'
+      bash -c "envsubst '$$REPLICA1_OPEN_SERVER_PORT_MAPPING $$REPLICA2_OPEN_SERVER_PORT_MAPPING $$REPLICA3_OPEN_SERVER_PORT_MAPPING $$NGINX_OPEN_HTTPS_PORT $$NGINX_OPEN_HTTP_PORT $$SERVER_IP'
       < /etc/nginx/nginx.template
       > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
     environment:
@@ -22,13 +21,13 @@ services:
       - NGINX_OPEN_HTTP_PORT=${NGINX_OPEN_HTTP_PORT}
 
   server1:
-    build: .
+    image: danillatency/tablet-intake-monitoring-system:latest
     ports:
       - ${REPLICA1_OPEN_SERVER_PORT_MAPPING}:${OPEN_SERVER_PORT}  # computer-port:container-port (exposed)
     restart: always
     volumes:
       - .env:/app/.env:ro
-      - ./font/env.js:/app/front/env.js:ro
+      - ./front/env.js:/app/front/env.js:ro
     environment:
       - REPLICA_NAME=Marina
     depends_on:
@@ -36,13 +35,13 @@ services:
         condition: service_healthy
 
   server2:
-    build: .
+    image: danillatency/tablet-intake-monitoring-system:latest
     ports:
       - ${REPLICA2_OPEN_SERVER_PORT_MAPPING}:${OPEN_SERVER_PORT}
     restart: always
     volumes:
       - .env:/app/.env:ro
-      - ./font/env.js:/app/front/env.js:ro
+      - ./front/env.js:/app/front/env.js:ro
     environment:
       - REPLICA_NAME=Jessica
     depends_on:
@@ -50,13 +49,13 @@ services:
         condition: service_healthy
 
   server3:
-    build: .
+    image: danillatency/tablet-intake-monitoring-system:latest
     ports:
       - ${REPLICA3_OPEN_SERVER_PORT_MAPPING}:${OPEN_SERVER_PORT}
     restart: always
     volumes:
       - .env:/app/.env:ro
-      - ./font/env.js:/app/front/env.js:ro
+      - ./front/env.js:/app/front/env.js:ro
     environment:
       - REPLICA_NAME=Leon
     depends_on:
