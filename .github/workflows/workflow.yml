@@ -28,9 +28,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: build the image
-      run: docker build . --tag tablet-intake-monitoring-system:latest
+      run: docker build . --tag danillatency/tablet-intake-monitoring-system:latest
     - name: push the image to Docker Hub
       run: |
         docker login -u danillatency -p ${{ secrets.DOCKER_HUB_TOKEN }}
-        docker push tablet-intake-monitoring-system:latest
+        docker push danillatency/tablet-intake-monitoring-system:latest
         
