@@ -10,8 +10,6 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
 function hashPassword(password) {
     const salt = crypto.randomBytes(16).toString('hex');
     const hash = crypto.scryptSync(password, salt, 64).toString('hex');
@@ -28,7 +26,7 @@ function checkPassword(password, savedPassword) {
 }
 
 function createToken(login) {
-    return jwt.sign({ login }, JWT_SECRET, { expiresIn: '7d' });
+    return jwt.sign({ login }, process.env.JWT_SECRET, { expiresIn: '7d' });
 }
 
 export async function loginOrRegister(req, res) {
