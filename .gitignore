@@ -4,3 +4,4 @@ node_modules
 .idea
 /generated/prisma
 /backend/data/postgresql/
+scripts/results
